@@ -3,6 +3,7 @@ export interface Entity {
   name: string;
   type: "Private" | "Government" | "Public" | "Military";
   headquarters: string;
+  coordinates: [number, number]; // [lat, lng]
   description: string;
   tags: string[];
   founded: string;
@@ -17,6 +18,7 @@ export const mockEntities: Entity[] = [
     name: "Palantir Technologies",
     type: "Private",
     headquarters: "Denver, Colorado, USA",
+    coordinates: [39.7392, -104.9903],
     description: "Specializes in big data analytics, serving government agencies and financial institutions with predictive policing and surveillance tools.",
     tags: ["Big Data", "Predictive Policing", "Intelligence", "Defense"],
     founded: "2003",
@@ -28,6 +30,7 @@ export const mockEntities: Entity[] = [
     name: "NSO Group",
     type: "Private",
     headquarters: "Herzliya, Israel",
+    coordinates: [32.1624, 34.8447],
     description: "Cyber-intelligence firm known for developing the Pegasus spyware, capable of remote zero-click surveillance of smartphones.",
     tags: ["Spyware", "Cyber Intelligence", "Mobile Surveillance"],
     founded: "2010",
@@ -39,6 +42,7 @@ export const mockEntities: Entity[] = [
     name: "Clearview AI",
     type: "Private",
     headquarters: "New York, USA",
+    coordinates: [40.7128, -74.0060],
     description: "Facial recognition company that scrapes images from social media to build a massive biometric database for law enforcement.",
     tags: ["Facial Recognition", "Biometrics", "Scraping", "AI"],
     founded: "2017",
@@ -50,6 +54,7 @@ export const mockEntities: Entity[] = [
     name: "Hikvision",
     type: "Public",
     headquarters: "Hangzhou, China",
+    coordinates: [30.2741, 120.1551],
     description: "State-backed manufacturer of video surveillance equipment, implicated in mass surveillance programs.",
     tags: ["CCTV", "Hardware", "Facial Recognition", "Smart Cities"],
     founded: "2001",
@@ -61,6 +66,7 @@ export const mockEntities: Entity[] = [
     name: "Cellebrite",
     type: "Public",
     headquarters: "Petah Tikva, Israel",
+    coordinates: [32.0840, 34.8878],
     description: "Digital intelligence company providing tools for mobile forensics and data extraction to law enforcement agencies.",
     tags: ["Forensics", "Mobile Extraction", "Digital Intelligence"],
     founded: "1999",
@@ -72,6 +78,7 @@ export const mockEntities: Entity[] = [
     name: "Axon Enterprise",
     type: "Public",
     headquarters: "Scottsdale, Arizona, USA",
+    coordinates: [33.4942, -111.9261],
     description: "Develops Tasers, body cameras, and evidence management software (Evidence.com) for police forces worldwide.",
     tags: ["Body Cameras", "Law Enforcement", "Cloud Storage"],
     founded: "1993",
@@ -83,6 +90,7 @@ export const mockEntities: Entity[] = [
     name: "SenseTime",
     type: "Public",
     headquarters: "Hong Kong",
+    coordinates: [22.3193, 114.1694],
     description: "AI company focusing on computer vision and deep learning, providing technology for facial recognition and autonomous driving.",
     tags: ["AI", "Computer Vision", "Facial Recognition"],
     founded: "2014",
@@ -94,6 +102,7 @@ export const mockEntities: Entity[] = [
     name: "Ring (Amazon)",
     type: "Private",
     headquarters: "Santa Monica, California, USA",
+    coordinates: [34.0195, -118.4912],
     description: "Home security company known for its video doorbells and partnerships with police departments for video sharing.",
     tags: ["Home Security", "IoT", "Police Partnerships"],
     founded: "2013",
@@ -105,6 +114,7 @@ export const mockEntities: Entity[] = [
     name: "Gaza Systems",
     type: "Military",
     headquarters: "Unknown",
+    coordinates: [34.50, 69.20], // Random location (Kabulish) for visual interest
     description: "Hypothetical military contractor specializing in drone surveillance grids and autonomous perimeter defense.",
     tags: ["Drones", "Autonomous Systems", "Defense"],
     founded: "2018",
@@ -116,6 +126,7 @@ export const mockEntities: Entity[] = [
     name: "Dataminr",
     type: "Private",
     headquarters: "New York, USA",
+    coordinates: [40.7528, -73.9860], // Slightly offset from Clearview
     description: "AI platform that analyzes public social media data to provide real-time alerts to news, finance, and public sector clients.",
     tags: ["Social Media Intelligence", "Real-time Alerts", "AI"],
     founded: "2009",

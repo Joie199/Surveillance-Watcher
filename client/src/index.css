@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -86,4 +87,23 @@ h1, h2, h3, h4, h5, h6 {
 
 code, pre {
   @apply font-mono;
+}
+
+/* Leaflet specific overrides for dark theme */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-tip {
+  background: hsl(217 33% 17%) !important; /* Match card color */
+  border-top: 1px solid hsl(142 71% 45% / 0.3) !important;
+}
+
+/* Grayscale/Invert map tiles for a more "hacker" feel if we wanted, 
+   but we're using Dark Matter tiles which are already good. 
+   We can add a subtle cyan tint though. */
+.leaflet-tile-pane {
+  filter: contrast(1.1) saturate(0.8);
 }
