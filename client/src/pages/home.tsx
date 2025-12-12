@@ -1,26 +1,23 @@
-import { useState } from "react";
+import { Link } from "wouter";
 import { Header } from "@/components/Header";
-import { FilterBar } from "@/components/FilterBar";
-import { EntityCard } from "@/components/EntityCard";
-import { mockEntities } from "@/data/mockEntities";
-import { Activity, Database, Server, Wifi, Eye } from "lucide-react";
+import { Activity, Database, Server, Eye, ArrowRight, Map, Database as DbIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+
+async function fetchEntitiesCount(): Promise<number> {
+  const response = await fetch("/api/entities");
+  if (!response.ok) {
+    return 0;
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data.length : 0;
+}
 
 export default function Home() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterRisk, setFilterRisk] = useState("all");
-
-  const filteredEntities = mockEntities.filter(entity => {
-    const matchesSearch = 
-      entity.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      entity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entity.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesType = filterType === "all" || entity.type === filterType;
-    const matchesRisk = filterRisk === "all" || entity.riskLevel === filterRisk;
-
-    return matchesSearch && matchesType && matchesRisk;
+  const { data: entityCount = 0 } = useQuery({
+    queryKey: ["entities-count"],
+    queryFn: fetchEntitiesCount,
   });
 
   return (
@@ -39,7 +36,7 @@ export default function Home() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
-              SYSTEM ACTIVE: TRACKING {mockEntities.length} ENTITIES
+              SYSTEM ACTIVE: TRACKING {entityCount} ENTITIES
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight mb-4 text-white">
               Who is watching <span className="text-primary">you?</span>
@@ -66,54 +63,39 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-display font-semibold text-foreground">Tracked Entities</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Displaying {filteredEntities.length} of {mockEntities.length} organizations
-              </p>
-            </div>
-          </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link href="/entities">
+            <Card className="group relative overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_-10px_rgba(34,197,94,0.3)] backdrop-blur-sm cursor-pointer h-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <DbIcon className="h-8 w-8 text-primary mb-2" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                </div>
+                <CardTitle className="font-display text-xl">Browse Entities</CardTitle>
+                <CardDescription>
+                  Explore our comprehensive database of surveillance technology vendors, 
+                  government contracts, and monitoring capabilities.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
 
-          <FilterBar 
-            searchTerm={searchTerm} 
-            setSearchTerm={setSearchTerm}
-            filterType={filterType}
-            setFilterType={setFilterType}
-            filterRisk={filterRisk}
-            setFilterRisk={setFilterRisk}
-          />
-
-          {filteredEntities.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEntities.map((entity) => (
-                <EntityCard key={entity.id} entity={entity} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-border/50 rounded-lg bg-card/20">
-              <div className="h-16 w-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <Wifi className="h-8 w-8 text-muted-foreground/50" />
-              </div>
-              <h3 className="text-xl font-display font-medium text-foreground">No entities found</h3>
-              <p className="text-muted-foreground mt-2 max-w-xs">
-                Try adjusting your search terms or filters to find what you're looking for.
-              </p>
-              <Button 
-                variant="link" 
-                className="mt-4 text-primary"
-                onClick={() => {
-                  setSearchTerm("");
-                  setFilterType("all");
-                  setFilterRisk("all");
-                }}
-              >
-                Clear all filters
-              </Button>
-            </div>
-          )}
+          <Link href="/map">
+            <Card className="group relative overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_-10px_rgba(34,197,94,0.3)] backdrop-blur-sm cursor-pointer h-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <Map className="h-8 w-8 text-primary mb-2" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                </div>
+                <CardTitle className="font-display text-xl">Interactive Map</CardTitle>
+                <CardDescription>
+                  View surveillance entities on an interactive world map with 
+                  geographic distribution and location data.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       </main>
 

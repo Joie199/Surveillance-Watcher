@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, SlidersHorizontal, Map, Database, ShieldAlert } from "lucide-react";
+import { Search, Filter, SlidersHorizontal, Map, Database, ShieldAlert, Globe, Tag } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,6 +16,12 @@ interface FilterBarProps {
   setFilterType: (type: string) => void;
   filterRisk: string;
   setFilterRisk: (risk: string) => void;
+  filterCountry?: string;
+  setFilterCountry?: (country: string) => void;
+  filterCategory?: string;
+  setFilterCategory?: (category: string) => void;
+  availableCountries?: string[];
+  availableCategories?: string[];
 }
 
 export function FilterBar({ 
@@ -23,8 +29,14 @@ export function FilterBar({
   setSearchTerm, 
   filterType, 
   setFilterType,
-  filterRisk,
-  setFilterRisk
+  filterRisk, 
+  setFilterRisk,
+  filterCountry = "all",
+  setFilterCountry,
+  filterCategory = "all",
+  setFilterCategory,
+  availableCountries = [],
+  availableCategories = []
 }: FilterBarProps) {
   return (
     <div className="w-full space-y-4 lg:space-y-0 lg:flex lg:items-center lg:gap-4 p-4 rounded-lg bg-card/30 border border-border/50 backdrop-blur-sm">
@@ -67,13 +79,35 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 border-border/50 bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
-          <Map className="h-4 w-4" />
-        </Button>
-        
-        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 border-border/50 bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
-          <SlidersHorizontal className="h-4 w-4" />
-        </Button>
+        {setFilterCountry && (
+          <Select value={filterCountry} onValueChange={setFilterCountry}>
+            <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-10 font-mono text-xs">
+              <Globe className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue placeholder="All Countries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Countries</SelectItem>
+              {availableCountries.map(country => (
+                <SelectItem key={country} value={country}>{country}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {setFilterCategory && (
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-10 font-mono text-xs">
+              <Tag className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {availableCategories.map(category => (
+                <SelectItem key={category} value={category}>{category}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
     </div>
   );

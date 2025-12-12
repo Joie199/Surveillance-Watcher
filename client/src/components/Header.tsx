@@ -8,7 +8,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
-    { name: "Entities", href: "/" },
+    { name: "Entities", href: "/entities" },
     { name: "Map", href: "/map" },
     { name: "Technologies", href: "/tech" },
     { name: "Submit Info", href: "/submit" },

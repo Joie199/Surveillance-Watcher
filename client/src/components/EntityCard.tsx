@@ -1,8 +1,24 @@
-import { Entity } from "@/data/mockEntities";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { MapPin, Building2, Calendar, Users, AlertTriangle, ShieldAlert, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "wouter";
+import { motion } from "framer-motion";
+
+interface Entity {
+  id: string;
+  name: string;
+  type: string;
+  headquarters: string;
+  latitude: number;
+  longitude: number;
+  description: string;
+  tags: string[];
+  founded?: string;
+  employees?: string;
+  riskLevel: string;
+  logo?: string;
+}
 
 interface EntityCardProps {
   entity: Entity;
@@ -19,7 +35,14 @@ export function EntityCard({ entity }: EntityCardProps) {
   };
 
   return (
-    <Card className="group relative overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_-10px_rgba(34,197,94,0.3)] backdrop-blur-sm">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ y: -4 }}
+    >
+      <Link href={`/entities/${entity.id}`}>
+        <Card className="group relative overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_-10px_rgba(34,197,94,0.3)] backdrop-blur-sm cursor-pointer">
       {/* Corner accents */}
       <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary/30 group-hover:border-primary transition-colors" />
       <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-primary/30 group-hover:border-primary transition-colors" />
@@ -73,16 +96,22 @@ export function EntityCard({ entity }: EntityCardProps) {
       </CardContent>
 
       <CardFooter className="pt-3 border-t border-border/30 flex flex-wrap gap-1.5">
-        {entity.tags.map(tag => (
-          <Badge 
-            key={tag} 
-            variant="outline" 
-            className="text-[10px] font-mono font-normal text-muted-foreground border-border/50 bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-default"
-          >
-            {tag}
-          </Badge>
-        ))}
+        {entity.tags && entity.tags.length > 0 ? (
+          entity.tags.map(tag => (
+            <Badge 
+              key={tag} 
+              variant="outline" 
+              className="text-[10px] font-mono font-normal text-muted-foreground border-border/50 bg-background/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors cursor-default"
+            >
+              {tag}
+            </Badge>
+          ))
+        ) : (
+          <span className="text-xs text-muted-foreground/50">No tags</span>
+        )}
       </CardFooter>
-    </Card>
+        </Card>
+      </Link>
+    </motion.div>
   );
 }

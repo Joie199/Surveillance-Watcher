@@ -107,3 +107,8 @@ code, pre {
 .leaflet-tile-pane {
   filter: contrast(1.1) saturate(0.8);
 }
+
+/* Research network marker styling - make them cyan/blue */
+.leaflet-marker-icon.research-marker {
+  filter: hue-rotate(180deg) saturate(1.5) brightness(1.2);
+}
