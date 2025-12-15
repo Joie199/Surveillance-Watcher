@@ -9,3 +9,5 @@ database.sqlite-journal
 migrations
 .cursor/
 .local/
+*.log
+server-output.log

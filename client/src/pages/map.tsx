@@ -7,11 +7,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Icon } from "leaflet";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, MapPin, Navigation, Layers, Filter, X } from "lucide-react";
+import { AlertTriangle, MapPin, Navigation, Layers, Filter, X, Globe } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useMemo } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
+import Globe3D from "@/components/Globe3D";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ interface Entity {
   employees?: string;
   riskLevel: string;
   logo?: string;
+  category?: string;
 }
 
 async function fetchEntities(): Promise<Entity[]> {
@@ -78,6 +80,7 @@ export default function MapPage() {
   const [filterType, setFilterType] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [showResearchPoints, setShowResearchPoints] = useState(true);
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("3d"); // Default to 3D
   
   const { data: allEntities = [], isLoading } = useQuery({
     queryKey: ["entities"],
@@ -149,11 +152,44 @@ export default function MapPage() {
     );
   }
 
+  // Show 3D Globe view
+  if (viewMode === "3d") {
+    return (
+      <div className="relative">
+        <Globe3D />
+        {/* View Toggle Button */}
+        <div className="absolute top-20 right-6 z-[1000]">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode("2d")}
+            className="bg-[#02000a]/90 backdrop-blur-md border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            2D Map
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       <Header />
       
       <main className="flex-1 relative">
+        {/* View Toggle Button */}
+        <div className="absolute top-20 right-6 z-[1000]">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode("3d")}
+            className="bg-card/90 backdrop-blur-md border-primary/30 hover:bg-primary/10"
+          >
+            <Globe className="h-4 w-4 mr-2" />
+            3D Globe
+          </Button>
+        </div>
         <div className="absolute inset-0 z-0">
           <MapContainer 
             center={[20, 0]} 
