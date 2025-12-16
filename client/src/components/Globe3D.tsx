@@ -87,7 +87,7 @@ function generateArcs(entities: Entity[]): Array<{
 }
 
 export default function Globe3D() {
-  const globeEl = useRef<any>();
+  const globeEl = useRef<any>(null);
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [filterRisk, setFilterRisk] = useState("all");
@@ -191,13 +191,23 @@ export default function Globe3D() {
               obj.material.needsUpdate = true;
             }
             
-            // Make polygon borders (country borders) thin and faint
+            // Make polygon borders (country borders) thin and faint, positioned on ground
             if (obj.name?.includes('polygon') || obj.userData?.isPolygon) {
               if (obj.material) {
                 obj.material.transparent = true;
                 obj.material.opacity = 0.25; // Faint white/gray
                 obj.material.color = new THREE.Color(0xffffff);
                 obj.material.needsUpdate = true;
+              }
+              // Position polygon at globe surface (radius = 1)
+              if (obj.position) {
+                // Ensure polygon is at globe radius
+                const currentRadius = obj.position.length();
+                if (currentRadius > 0.99 && currentRadius < 1.01) {
+                  // Already at surface, but ensure it's exactly at radius 1
+                  obj.position.normalize();
+                  obj.position.multiplyScalar(1.0);
+                }
               }
               // Make line width thin and uniform
               if (obj.isLine) {
@@ -263,11 +273,26 @@ export default function Globe3D() {
     });
   }, []);
 
-  // Globe with natural ocean shading (deep seas dark, shores light, mixed variation)
-  // No linear gradient - just natural depth-based shading with variation
+  // Countries with significant desert regions
+  const desertCountries = new Set([
+    'Algeria', 'Libya', 'Egypt', 'Sudan', 'Chad', 'Niger', 'Mali', 'Mauritania', // Sahara
+    'Saudi Arabia', 'United Arab Emirates', 'Oman', 'Yemen', 'Iraq', 'Kuwait', 'Qatar', 'Bahrain', // Arabian
+    'Mongolia', 'China', // Gobi, Taklamakan
+    'Australia', // Australian deserts
+    'Botswana', 'Namibia', 'South Africa', // Kalahari, Namib
+    'Chile', 'Peru', // Atacama
+    'United States', 'Mexico', // Sonoran, Mojave, Chihuahuan, Great Basin
+    'India', 'Pakistan', // Thar
+    'Argentina', // Patagonian
+    'Turkmenistan', 'Uzbekistan', 'Kazakhstan', // Central Asian deserts
+    'Syria', 'Jordan', // Syrian Desert
+    'Iran', 'Afghanistan' // Additional desert regions
+  ]);
+
+  // Globe with natural ocean shading using actual country borders from GeoJSON
   const earthTextureUrl = useMemo(() => {
-    if (typeof document === 'undefined') {
-      // Fallback for SSR - solid medium blue
+    if (typeof document === 'undefined' || countriesData.length === 0) {
+      // Fallback for SSR or before countries data loads - solid medium blue
       return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2048' height='1024'%3E%3Crect width='2048' height='1024' fill='%23002d4d'/%3E%3C/svg%3E";
     }
     
@@ -278,135 +303,157 @@ export default function Globe3D() {
     const ctx = canvas.getContext('2d');
     
     if (ctx) {
-      // Base color - medium blue-grey
+      // Base color - medium blue-grey (ocean)
       ctx.fillStyle = '#002d4d';
       ctx.fillRect(0, 0, 2048, 1024);
+      
+      // Create a separate canvas to draw country polygons for efficient land detection
+      const landCanvas = document.createElement('canvas');
+      landCanvas.width = 2048;
+      landCanvas.height = 1024;
+      const landCtx = landCanvas.getContext('2d');
+      
+      // Create a map to store country names by color (for later lookup)
+      const countryColorMap = new Map<string, string>();
+      let colorCounter = 1; // Start at 1, 0 is reserved for ocean/transparent
+      
+      // Draw all country polygons with unique colors
+      if (landCtx) {
+        landCtx.clearRect(0, 0, 2048, 1024);
+        
+        for (const feature of countriesData) {
+          const countryName = feature.properties?.NAME || feature.properties?.name || feature.properties?.NAME_LONG || 'Unknown';
+          const color = colorCounter++;
+          
+          // Encode color as RGB: use sequential encoding
+          // Distribute across RGB channels to avoid conflicts
+          const r = Math.min(255, (color & 0xFF));
+          const g = Math.min(255, ((color >> 8) & 0xFF));
+          const b = Math.min(255, ((color >> 16) & 0xFF));
+          const colorKey = `${r},${g},${b}`;
+          countryColorMap.set(colorKey, countryName);
+          
+          landCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          landCtx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+          
+          const { type, coordinates } = feature.geometry;
+          
+          // Draw polygon
+          if (type === 'Polygon') {
+            coordinates.forEach((ring: number[][], ringIndex: number) => {
+              landCtx.beginPath();
+              ring.forEach((coord: number[], pointIndex: number) => {
+                const [lng, lat] = coord;
+                const x = ((lng + 180) / 360) * 2048;
+                const y = ((90 - lat) / 180) * 1024;
+                if (pointIndex === 0) {
+                  landCtx.moveTo(x, y);
+                } else {
+                  landCtx.lineTo(x, y);
+                }
+              });
+              landCtx.closePath();
+              if (ringIndex === 0) {
+                landCtx.fill(); // Fill exterior ring
+              }
+            });
+          } else if (type === 'MultiPolygon') {
+            coordinates.forEach((polygon: number[][][]) => {
+              polygon.forEach((ring: number[][], ringIndex: number) => {
+                landCtx.beginPath();
+                ring.forEach((coord: number[], pointIndex: number) => {
+                  const [lng, lat] = coord;
+                  const x = ((lng + 180) / 360) * 2048;
+                  const y = ((90 - lat) / 180) * 1024;
+                  if (pointIndex === 0) {
+                    landCtx.moveTo(x, y);
+                  } else {
+                    landCtx.lineTo(x, y);
+                  }
+                });
+                landCtx.closePath();
+                if (ringIndex === 0) {
+                  landCtx.fill(); // Fill exterior ring
+                }
+              });
+            });
+          }
+        }
+      }
+      
+      // Get the land mask image data
+      const landImageData = landCtx?.getImageData(0, 0, 2048, 1024);
       
       // Create depth-based shading: deep seas (dark) and shallow areas (light)
       // Use Perlin-like noise pattern for natural variation
       const imageData = ctx.createImageData(2048, 1024);
       const data = imageData.data;
       
-      // Helper function to check if coordinates are on land (major continents)
-      const isLandArea = (longitude: number, latitude: number): boolean => {
-        // Major landmasses - approximate boundaries
-        // North America
-        if (latitude >= 10 && latitude <= 70 && longitude >= -170 && longitude <= -50) {
-          return true;
-        }
-        // South America
-        if (latitude >= -55 && latitude <= 12 && longitude >= -85 && longitude <= -35) {
-          return true;
-        }
-        // Europe
-        if (latitude >= 35 && latitude <= 72 && longitude >= -10 && longitude <= 40) {
-          return true;
-        }
-        // Africa
-        if (latitude >= -35 && latitude <= 37 && longitude >= -20 && longitude <= 50) {
-          return true;
-        }
-        // Asia
-        if (latitude >= 10 && latitude <= 75 && longitude >= 40 && longitude <= 180) {
-          return true;
-        }
-        // Australia
-        if (latitude >= -45 && latitude <= -10 && longitude >= 110 && longitude <= 155) {
-          return true;
-        }
-        // Greenland
-        if (latitude >= 60 && latitude <= 84 && longitude >= -75 && longitude <= -10) {
-          return true;
-        }
-        // Indonesia/Philippines
-        if (latitude >= -10 && latitude <= 20 && longitude >= 95 && longitude <= 145) {
-          return true;
-        }
-        // Japan
-        if (latitude >= 24 && latitude <= 46 && longitude >= 123 && longitude <= 146) {
-          return true;
-        }
-        // Madagascar
-        if (latitude >= -26 && latitude <= -12 && longitude >= 43 && longitude <= 50) {
-          return true;
-        }
-        // New Zealand
-        if (latitude >= -48 && latitude <= -34 && longitude >= 166 && longitude <= 179) {
-          return true;
-        }
-        // Iceland
-        if (latitude >= 63 && latitude <= 67 && longitude >= -25 && longitude <= -13) {
-          return true;
-        }
-        // British Isles
-        if (latitude >= 50 && latitude <= 61 && longitude >= -10 && longitude <= 2) {
-          return true;
-        }
-        
-        return false;
+      // Helper function to get country name from pixel color in land mask
+      const getCountryFromPixel = (x: number, y: number): string | undefined => {
+        if (!landImageData) return undefined;
+        const idx = (y * 2048 + x) * 4;
+        const r = landImageData.data[idx];
+        const g = landImageData.data[idx + 1];
+        const b = landImageData.data[idx + 2];
+        // If pixel is black/transparent (0,0,0), it's ocean
+        if (r === 0 && g === 0 && b === 0) return undefined;
+        const colorKey = `${r},${g},${b}`;
+        return countryColorMap.get(colorKey);
       };
       
-      // Helper function to check if coordinates are in a real desert region (land areas)
-      const isDesertRegion = (longitude: number, latitude: number): boolean => {
-        // Major desert regions based on real-world locations (land areas only)
-        // Sahara Desert (North Africa) - largest hot desert
-        if (latitude >= 10 && latitude <= 30 && longitude >= -15 && longitude <= 40) {
-          return true;
-        }
-        // Arabian Desert
-        if (latitude >= 12 && latitude <= 30 && longitude >= 35 && longitude <= 60) {
-          return true;
-        }
-        // Gobi Desert (Mongolia/China)
-        if (latitude >= 40 && latitude <= 50 && longitude >= 90 && longitude <= 120) {
-          return true;
-        }
-        // Australian Outback/Deserts
-        if (latitude >= -30 && latitude <= -15 && longitude >= 110 && longitude <= 150) {
-          return true;
-        }
-        // Kalahari Desert (Southern Africa)
-        if (latitude >= -25 && latitude <= -20 && longitude >= 19 && longitude <= 25) {
-          return true;
-        }
-        // Atacama Desert (South America)
-        if (latitude >= -30 && latitude <= -15 && longitude >= -75 && longitude <= -70) {
-          return true;
-        }
-        // Sonoran/Mojave Deserts (North America)
-        if (latitude >= 25 && latitude <= 40 && longitude >= -120 && longitude <= -110) {
-          return true;
-        }
-        // Thar Desert (India/Pakistan)
-        if (latitude >= 24 && latitude <= 30 && longitude >= 68 && longitude <= 75) {
-          return true;
-        }
-        // Patagonian Desert (South America)
-        if (latitude >= -50 && latitude <= -40 && longitude >= -75 && longitude <= -65) {
-          return true;
-        }
-        // Namib Desert (Southwest Africa)
-        if (latitude >= -25 && latitude <= -15 && longitude >= 12 && longitude <= 20) {
-          return true;
-        }
-        // Taklamakan Desert (China)
-        if (latitude >= 37 && latitude <= 42 && longitude >= 75 && longitude <= 90) {
-          return true;
-        }
-        // Karakum Desert (Turkmenistan)
-        if (latitude >= 37 && latitude <= 42 && longitude >= 55 && longitude <= 65) {
-          return true;
-        }
-        // Syrian Desert
-        if (latitude >= 32 && latitude <= 37 && longitude >= 37 && longitude <= 42) {
-          return true;
-        }
-        // Great Basin Desert (North America)
-        if (latitude >= 35 && latitude <= 42 && longitude >= -120 && longitude <= -110) {
-          return true;
-        }
-        // Chihuahuan Desert (North America)
-        if (latitude >= 25 && latitude <= 35 && longitude >= -110 && longitude <= -100) {
+      // Helper function to check if coordinates are on land using actual country borders
+      const isLandArea = (longitude: number, latitude: number): { isLand: boolean; countryName?: string } => {
+        // Convert lat/lng to pixel coordinates
+        const x = Math.floor(((longitude + 180) / 360) * 2048);
+        const y = Math.floor(((90 - latitude) / 180) * 1024);
+        
+        // Clamp to valid range
+        const px = Math.max(0, Math.min(2047, x));
+        const py = Math.max(0, Math.min(1023, y));
+        
+        const countryName = getCountryFromPixel(px, py);
+        return { isLand: countryName !== undefined, countryName };
+      };
+      
+      // Helper function to check if coordinates are in a desert region based on country
+      const isDesertRegion = (countryName: string | undefined, longitude: number, latitude: number): boolean => {
+        if (!countryName) return false;
+        
+        // Check if country is known for deserts
+        if (desertCountries.has(countryName)) {
+          // Additional geographic checks for specific desert regions within countries
+          // Sahara region (North Africa)
+          if (['Algeria', 'Libya', 'Egypt', 'Sudan', 'Chad', 'Niger', 'Mali', 'Mauritania'].includes(countryName)) {
+            if (latitude >= 10 && latitude <= 30 && longitude >= -15 && longitude <= 40) {
+              return true;
+            }
+          }
+          // Arabian Peninsula
+          if (['Saudi Arabia', 'United Arab Emirates', 'Oman', 'Yemen', 'Iraq', 'Kuwait', 'Qatar', 'Bahrain'].includes(countryName)) {
+            if (latitude >= 12 && latitude <= 30 && longitude >= 35 && longitude <= 60) {
+              return true;
+            }
+          }
+          // Gobi Desert region
+          if (['Mongolia', 'China'].includes(countryName)) {
+            if (latitude >= 40 && latitude <= 50 && longitude >= 90 && longitude <= 120) {
+              return true;
+            }
+          }
+          // Australian deserts
+          if (countryName === 'Australia') {
+            if (latitude >= -30 && latitude <= -15 && longitude >= 110 && longitude <= 150) {
+              return true;
+            }
+          }
+          // US/Mexico deserts
+          if (['United States', 'Mexico'].includes(countryName)) {
+            if (latitude >= 25 && latitude <= 40 && longitude >= -120 && longitude <= -100) {
+              return true;
+            }
+          }
+          // For other desert countries, assume significant desert coverage
           return true;
         }
         
@@ -423,10 +470,13 @@ export default function Globe3D() {
           const longitude = (x / 2048) * 360 - 180;
           const latitude = 90 - (y / 1024) * 180;
           
-          // Check if this is on land
-          const isLand = isLandArea(longitude, latitude);
-          // Check if this is a desert region (land area)
-          const isDesert = isLand && isDesertRegion(longitude, latitude);
+          // Check if this is on land using actual country borders
+          const landCheck = isLandArea(longitude, latitude);
+          const isLand = landCheck.isLand;
+          const countryName = landCheck.countryName;
+          
+          // Check if this is a desert region based on country
+          const isDesert = isLand && isDesertRegion(countryName, longitude, latitude);
           
           if (isDesert) {
             // Desert tones: natural tans, beiges, sandy colors
@@ -543,7 +593,7 @@ export default function Globe3D() {
     }
     
     return canvas.toDataURL('image/png');
-  }, []);
+  }, [countriesData]);
 
   if (!isClient) {
     return (
@@ -611,25 +661,24 @@ export default function Globe3D() {
             globeImageUrl={earthTextureUrl}
             showAtmosphere={false}
             showGraticules={true}
-            graticuleColor="rgba(255, 255, 255, 0.6)"
-            graticuleLabel={() => ""}
-            graticuleDashLength={0}
-            graticuleDashGap={0}
             polygonsData={countriesData}
             polygonLabel="properties.NAME"
-            polygonAltitude={0.01}
+            polygonAltitude={0} // Set to 0 so borders are on the ground surface
             polygonCapColor={() => "rgba(0, 0, 0, 0)"}
             polygonSideColor={() => "rgba(0, 0, 0, 0)"}
             polygonStrokeColor={() => "rgba(255, 255, 255, 0.25)"} // Faint white/gray
-            polygonStrokeWidth={0.5} // Thin, uniform stroke width
-            polygonCapMaterial={{
-              transparent: true,
-              opacity: 0,
-            }}
-            polygonSideMaterial={{
-              transparent: true,
-              opacity: 0,
-            }}
+            polygonCapMaterial={(() => {
+              const mat = new THREE.MeshStandardMaterial();
+              mat.transparent = true;
+              mat.opacity = 0;
+              return mat;
+            })()}
+            polygonSideMaterial={(() => {
+              const mat = new THREE.MeshStandardMaterial();
+              mat.transparent = true;
+              mat.opacity = 0;
+              return mat;
+            })()}
             rendererConfig={{
               antialias: true,
               alpha: true,
@@ -658,10 +707,6 @@ export default function Globe3D() {
             arcDashAnimateTime={2500}
             arcCurveResolution={128}
             backgroundColor="rgba(0,0,0,0)"
-            cameraOptions={{
-              enableDamping: true,
-              dampingFactor: 0.1,
-            }}
           />
         </div>
 
